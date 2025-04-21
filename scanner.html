@@ -1,0 +1,171 @@
+<!-- QR Code Scanner for Smart Cart with Quantity and Stylish UI -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Smart Cart QR Scanner</title>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #1c1c1c;
+      color: #f0f0f0;
+      text-align: center;
+      padding: 20px;
+    }
+    #reader {
+      width: 90%;
+      max-width: 350px;
+      margin: auto;
+      border: 2px solid #444;
+      border-radius: 10px;
+    }
+    #result, #checkout {
+      margin-top: 20px;
+      font-size: 22px;
+      font-weight: bold;
+    }
+    #checkout {
+      color: #4caf50;
+      transition: opacity 0.5s ease-in-out;
+    }
+    ul { list-style: none; padding: 0; margin-top: 20px; }
+    li { 
+      margin: 8px 0; 
+      background: #333;
+      padding: 10px; 
+      border-radius: 5px; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center;
+    }
+    button.remove-btn {
+      background-color: #e53935;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .hidden { display: none; }
+    select {
+      padding: 6px;
+      font-size: 16px;
+      margin: 10px;
+    }
+    .fade-in {
+      animation: fadeIn 0.5s ease-in-out forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <h2>Smart Cart - Scan Items</h2>
+  <div id="reader"></div>
+  <ul id="items"></ul>
+  <button id="doneBtn">Done</button>
+  <div id="quantitySelection" class="hidden"></div>
+  <div id="result">Total: $0</div>
+  <div id="checkout" class="hidden">Please proceed to Smile2Pay counter</div>
+
+  <script>
+    let total = 0;
+    const scannedItems = {};
+    const products = {
+      "apple": { name: "Apple", price: 1 },
+      "Eggs": { name: "Banana", price: 2 },
+      "milk": { name: "Milk", price: 4 },
+      "bread": { name: "Bread", price: 3 }
+    };
+
+    const itemList = document.getElementById("items");
+    const resultDisplay = document.getElementById("result");
+    const checkoutDisplay = document.getElementById("checkout");
+    const quantitySection = document.getElementById("quantitySelection");
+    const doneBtn = document.getElementById("doneBtn");
+
+    function updateTotal() {
+      total = 0;
+      for (let key in scannedItems) {
+        total += products[key].price * scannedItems[key];
+      }
+      resultDisplay.innerText = `Total: $${total.toFixed(2)}`;
+    }
+
+    function renderItems() {
+      itemList.innerHTML = "";
+      for (let key in scannedItems) {
+        const item = products[key];
+        const li = document.createElement("li");
+        li.innerHTML = `${item.name} x${scannedItems[key]} - $${(item.price * scannedItems[key]).toFixed(2)} ` +
+          `<button class="remove-btn" onclick="removeItem('${key}')">Remove</button>`;
+        itemList.appendChild(li);
+      }
+    }
+
+    function removeItem(itemKey) {
+      if (scannedItems[itemKey]) {
+        delete scannedItems[itemKey];
+        renderItems();
+        updateTotal();
+      }
+    }
+
+    function onScanSuccess(decodedText) {
+      if (products[decodedText] && !scannedItems[decodedText]) {
+        scannedItems[decodedText] = 1;
+        renderItems();
+      }
+    }
+
+    const html5QrcodeScanner = new Html5Qrcode("reader");
+    html5QrcodeScanner.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 250 },
+      onScanSuccess
+    );
+
+    doneBtn.addEventListener("click", () => {
+      quantitySection.innerHTML = "<h3>Select Quantities</h3>";
+      for (let key in scannedItems) {
+        const select = document.createElement("select");
+        select.id = `qty-${key}`;
+        for (let i = 1; i <= 10; i++) {
+          const option = document.createElement("option");
+          option.value = i;
+          option.text = i;
+          if (i === scannedItems[key]) option.selected = true;
+          select.appendChild(option);
+        }
+        const label = document.createElement("label");
+        label.innerText = `Quantity for ${products[key].name}: `;
+        label.appendChild(select);
+        quantitySection.appendChild(label);
+        quantitySection.appendChild(document.createElement("br"));
+      }
+      const proceed = document.createElement("button");
+      proceed.innerText = "Proceed";
+      proceed.onclick = finalizeBill;
+      quantitySection.appendChild(document.createElement("br"));
+      quantitySection.appendChild(proceed);
+
+      quantitySection.classList.remove("hidden");
+      quantitySection.classList.add("fade-in");
+    });
+
+    function finalizeBill() {
+      for (let key in scannedItems) {
+        const qty = parseInt(document.getElementById(`qty-${key}`).value);
+        scannedItems[key] = qty;
+      }
+      updateTotal();
+      renderItems();
+      quantitySection.classList.add("hidden");
+      checkoutDisplay.classList.remove("hidden");
+      checkoutDisplay.classList.add("fade-in");
+    }
+  </script>
+</body>
+</html>
